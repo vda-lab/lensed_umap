@@ -1,6 +1,7 @@
 # Build directories
 _build/
 build/
+dist/
 lensed_umap.egg-info/
 
 # Editor configurations
