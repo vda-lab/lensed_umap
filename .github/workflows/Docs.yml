@@ -44,7 +44,7 @@ jobs:
 
       - name: Prepare Examples
         run: |
-          cp ./notebooks/01_How_lensed_umap_works.ipynb ./docs/
+          cp ./notebooks/01_How_Lensed_UMAP_works.ipynb ./docs/
           cp ./notebooks/02_Case_NKI.ipynb ./docs/
           cp ./notebooks/03_Case_Air_Quality.ipynb ./docs/
 
