@@ -1,3 +1,6 @@
+[![PyPI version](https://badge.fury.io/py/lensed-umap.svg)](https://badge.fury.io/py/lensed-umap)
+[![Tests](https://github.com/vda-lab/lensed_umap/actions/workflows/Tests.yml/badge.svg)](https://github.com/vda-lab/lensed_umap/actions/workflows/Tests.yml)
+
 # Lensed UMAP
 
 Lensed UMAP provides three methods that apply lens-functions to a UMAP model.

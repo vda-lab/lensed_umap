@@ -27,11 +27,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_sdist:
+  build_dists:
     name: Build dists
     runs-on: ubuntu-20.04
     outputs:
-      WHEEL_NAME: ${{ steps.sdist.outputs.WHEEL_NAME }}
+      WHEEL_NAME: ${{ steps.dists.outputs.WHEEL_NAME }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,8 +54,8 @@ jobs:
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      - name: Build sdist
-        id: sdist
+      - name: Build dists
+        id: dists
         run: |
           python -m build --sdist --wheel
           python ci/export_name.py
@@ -71,8 +71,8 @@ jobs:
           if-no-files-found: error
 
   test_sdist:
-    name: Test sdist for cp${{ matrix.python }}-${{ matrix.platform_id }}-${{ matrix.manylinux_image }}
-    needs: build_sdist
+    name: Test dist for cp${{ matrix.python }}-${{ matrix.platform_id }}-${{ matrix.manylinux_image }}
+    needs: build_dists
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
@@ -131,6 +131,6 @@ jobs:
 
       - name: Run tests
         run: |
-          pip install dist/${{ needs.build_sdist.outputs.WHEEL_NAME }}
+          pip install dist/${{ needs.build_dists.outputs.WHEEL_NAME }}
           python -c "from lensed_umap.tests import run_tests; run_tests()"
   
