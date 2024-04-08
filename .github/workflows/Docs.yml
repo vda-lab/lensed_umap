@@ -44,11 +44,9 @@ jobs:
 
       - name: Prepare Examples
         run: |
-          cd notebooks
-          for FILE in *.ipynb; do 
-            cp $FILE ../docs
-          done
-          cd ..
+          cp notebooks/01_How_lensed_umap_works.ipynb ./docs/
+          cp notebooks/02_Case_NKI.ipynb ./docs/
+          cp notebooks/03_Case_Air_Quality.ipynb ./docs/
 
       - id: deployment
         uses: sphinx-notes/pages@v3
