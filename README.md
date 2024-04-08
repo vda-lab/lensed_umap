@@ -62,7 +62,7 @@ contain the analyses presented in our paper.
 
 ## Installing
 
-`lensed_umap`` is available on PyPI:
+`lensed_umap` is available on PyPI:
 
 ```bash
 pip install lensed_umap
