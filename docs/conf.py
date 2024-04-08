@@ -19,7 +19,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",  # links to other Sphinx projects (e.g. NumPy)
-    "sphinxcontrib.napoleon",
+    "sphinx.ext.napoleon",
     "sphinx_last_updated_by_git",  # get "last updated" from Git
 ]
 
