@@ -1,0 +1,57 @@
+name: Documentation
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}-${{ github.event.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+    - main
+    paths:
+      - 'docs/**'
+      - 'notebooks/01_How_lensed_umap_works.ipynb'
+      - 'notebooks/02_Case_NKI.ipynb'
+      - 'notebooks/03_Case_Air_Quality.ipynb'
+      - 'lensed_umap/api.py'
+      - '.github/workflows/Docs.yml'
+  workflow_dispatch:
+
+jobs:
+  pages:
+    runs-on: ubuntu-20.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        name: Install python
+        with: 
+          python-version: 3.9
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          sudo apt-get install -y pandoc
+          pip install -e .
+
+      - name: Prepare Examples
+        run: |
+          cd notebooks
+          for FILE in *.ipynb; do 
+            cp $FILE ../docs
+          done
+          cd ..
+
+      - id: deployment
+        uses: sphinx-notes/pages@v3
+        with:
+          cache: True
+          checkout: False
