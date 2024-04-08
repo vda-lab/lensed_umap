@@ -7,3 +7,4 @@ include CHANGELOG.txt
 recursive-include docs *
 recursive-exclude docs/_build *
 recursive-exclude notebooks *
+recursive-exclude docs/_static/figures *
