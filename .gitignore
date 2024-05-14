@@ -15,7 +15,5 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Data files
-notebooks/data/
-notebooks/data/generated/
 notebooks/figures/frames/
 notebooks/figures/highres/
