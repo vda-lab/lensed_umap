@@ -1,5 +1,6 @@
 [![PyPI version](https://badge.fury.io/py/lensed-umap.svg)](https://badge.fury.io/py/lensed-umap)
 [![Tests](https://github.com/vda-lab/lensed_umap/actions/workflows/Tests.yml/badge.svg)](https://github.com/vda-lab/lensed_umap/actions/workflows/Tests.yml)
+[![Repository DOI](https://zenodo.org/badge/706249828.svg)](https://zenodo.org/doi/10.5281/zenodo.11193167)
 
 # Lensed UMAP
 
