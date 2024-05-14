@@ -19,7 +19,7 @@ jobs:
       contents: write
     environment:
       name: pypi
-      url: https://pypi.org/p/pyflasc
+      url: https://pypi.org/p/lensed-umap
     steps:
       - name: Extract version
         id: version
