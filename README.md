@@ -73,8 +73,18 @@ pip install lensed_umap
 
 ## Citing
 
-A scientific publication of this algorithm and codebase is in progress. Please
-refer back to this section to see how you can cite this work in the future. 
+A scientific paper describing our work is available on Arxiv:
+
+```bibtex
+@misc{bot2024lens,
+  title={Lens functions for exploring UMAP Projections with Domain Knowledge}, 
+  author={Daniel M. Bot and Jan Aerts},
+  year={2024},
+  eprint={2405.09204},
+  archivePrefix={arXiv},
+  primaryClass={cs.LG}
+}
+```
 
 ## Licensing
 
