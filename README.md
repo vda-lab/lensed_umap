@@ -1,5 +1,6 @@
 [![PyPI version](https://badge.fury.io/py/lensed-umap.svg)](https://badge.fury.io/py/lensed-umap)
 [![Tests](https://github.com/vda-lab/lensed_umap/actions/workflows/Tests.yml/badge.svg)](https://github.com/vda-lab/lensed_umap/actions/workflows/Tests.yml)
+[![Repository DOI](https://zenodo.org/badge/706249828.svg)](https://zenodo.org/doi/10.5281/zenodo.11193167)
 
 # Lensed UMAP
 
@@ -73,8 +74,18 @@ pip install lensed_umap
 
 ## Citing
 
-A scientific publication of this algorithm and codebase is in progress. Please
-refer back to this section to see how you can cite this work in the future. 
+A scientific paper describing our work is available on Arxiv:
+
+```bibtex
+@misc{bot2024lens,
+  title={Lens functions for exploring UMAP Projections with Domain Knowledge}, 
+  author={Daniel M. Bot and Jan Aerts},
+  year={2024},
+  eprint={2405.09204},
+  archivePrefix={arXiv},
+  primaryClass={cs.LG}
+}
+```
 
 ## Licensing
 
