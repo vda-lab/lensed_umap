@@ -56,6 +56,23 @@ def test_embed_graph():
     assert hasattr(clone, "embedding_")
 
 
+def test_multi_stage_embed_graph():
+     # Accept repulsion strengths as input
+    embed_graph(projector, repulsion_strengths=[0.01, 0.3, 0.03])
+    assert hasattr(projector, "embedding_")
+    del projector.embedding_
+
+    # Accept epoch sequences as input (warn if more epochs than repulsions)
+    with pytest.warns(UserWarning):
+        embed_graph(projector, epoch_sequence=[100, 100, 50])
+    assert hasattr(projector, "embedding_")
+    del projector.embedding_
+
+    # Accept both repulsion strengths and epoch sequences as input
+    embed_graph(projector, repulsion_strengths=[0.01, 0.3, 0.03], epoch_sequence=[100, 100, 50])
+    assert hasattr(projector, "embedding_")
+
+
 def test_apply_lens_inputs_invalid():
     # Invalid values
     assert_raises(AttributeError, lambda: apply_lens(empty_projector, lens))

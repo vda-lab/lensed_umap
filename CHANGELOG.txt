@@ -1,2 +1,6 @@
 v0.1.0
-    Initial version
+    Initial version.
+v0.1.1
+    Paper-submit version. Changes the figures included in the paper and creates zenodo DOI for the code.
+v0.1.2
+    Add multi-stage repulsion control to `embed_graph`.

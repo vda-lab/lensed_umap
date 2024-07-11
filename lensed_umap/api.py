@@ -14,7 +14,7 @@ from umap import UMAP
 from umap.umap_ import reset_local_connectivity as umap_reset_connectivity
 import umap.distances as dist
 
-from typing import Optional, Callable, Union
+from typing import Optional, Callable, Union    
 from numpy.typing import ArrayLike
 
 from .fast_impl import (
@@ -57,7 +57,7 @@ def apply_lens(
         A flag indicating wether the extrema should be seen as neighbours.
     discretization : str, default='regular'
         A flag indicating which discretization strategy to apply:
-            
+
         * 'regular' -> each segment contains the same value-range.
         * 'balanced' -> each segment contains the same number of points.
     skip_embedding : bool, default=False
@@ -66,7 +66,7 @@ def apply_lens(
         A flag to enable normalising edge weights after applying the lens.
 
         UMAP's embedding assumes each point has at least one fully connected
-        edge. This assumption can be enforced by enabling this flag. Embeddings 
+        edge. This assumption can be enforced by enabling this flag. Embeddings
         tend to vary more smoothly when this setting is enabled.
     ret_bins : bool, default=False
         A flag to return an array with each points' bin id.
@@ -78,7 +78,7 @@ def apply_lens(
     -------
     clone : UMAP
         A clone of projector with filtered `graph_` and updated `embedding_`.
-        
+
         Other attributes are soft-copies, modifying them also modifies the input
         object's attributes!
     """
@@ -161,7 +161,7 @@ def apply_mask(
         A flag to enable normalising edge weights after applying the lens.
 
         UMAP's embedding assumes each point has at least one fully connected
-        edge. This assumption can be enforced by enabling this flag. Embeddings 
+        edge. This assumption can be enforced by enabling this flag. Embeddings
         tend to vary more smoothly when this setting is enabled.
     **kwargs : dict, optional
         UMAP arguments to overwrite projector's values. These can overwrite
@@ -171,7 +171,7 @@ def apply_mask(
     -------
     clone : UMAP
         A clone of projector with filtered `graph_` and updated `embedding_`.
-        
+
         Other attributes are soft-copies, modifying them also modifies the input
         object's attributes!
     """
@@ -280,7 +280,7 @@ def apply_local_mask(
         A flag to enable normalising edge weights after applying the lens.
 
         UMAP's embedding assumes each point has at least one fully connected
-        edge. This assumption can be enforced by enabling this flag. Embeddings 
+        edge. This assumption can be enforced by enabling this flag. Embeddings
         tend to vary more smoothly when this setting is enabled.
     **kwargs : dict, optional
         UMAP arguments to overwrite projector's values. These can overwrite
@@ -290,7 +290,7 @@ def apply_local_mask(
     -------
     clone : UMAP
         A clone of projector with filtered `graph_` and updated `embedding_`.
-        
+
         Other attributes are soft-copies, modifying them also modifies the input
         object's attributes!
     """
@@ -357,18 +357,27 @@ def apply_local_mask(
     return clone
 
 
-def embed_graph(projector: UMAP):
+def embed_graph(
+    projector: UMAP,
+    repulsion_strengths: Optional[list[float]] = None,
+    epoch_sequence: Optional[list[int]] = None,
+):
     """
     (Re)-Computes UMAP embedding of (fitted) UMAP projector. Uses
     the current embedding as initialisation if one is present.
-    
+
     Parameters
     ----------
     projector : UMAP
-        A fitted UMAP object (at least with transform_mode='graph').
-
-        The `embedding_` field will be created or updated if present.
-    
+        A fitted UMAP object (at least with transform_mode='graph'). The
+        `embedding_` field will be created or updated if present.
+    repulsion_strengths : list of float, optional
+        Runs embedding procedure with given repulsion strengths in sequence,
+        allowing fine-grained repulsion ramps that can improve convergence.
+        Defaults to the projector's `repulsion_strength` attribute.
+    epoch_sequence : list of int, optional
+        The number of epochs to run each repulsion strength. If not given, uses
+        the projector's `n_epochs` attribute.
     Returns
     -------
     projector : UMAP
@@ -377,39 +386,54 @@ def embed_graph(projector: UMAP):
         This return value is provided to chain functions but can be ignored as
         the given UMAP object is updated inplace.
     """
-    # Extract initialisation
-    if not hasattr(projector, "embedding_"):
-        init = projector.init
-    else:
-        init = projector.embedding_
-        # Fill in reasonable far-away coordinates for disconnected vertices
-        # So they don't introduce repulsion in an occupied region of the embedding
-        init[np.any(np.isnan(init), axis=1), :] = np.array(
-            np.repeat([-8.0], init.shape[1])
-        )
+    # Fill default parameters
+    if repulsion_strengths is None:
+        repulsion_strengths = [projector.repulsion_strength]
+    if epoch_sequence is None:
+        epoch_sequence = [projector.n_epochs]
+    elif len(epoch_sequence) > len(repulsion_strengths):
+        warn("More epochs than repulsion strengths given. Ignoring extra epochs.")
 
-    # Compute the embedding
-    projector.embedding_, aux_data = projector._fit_embed_data(
-        projector._raw_data,
-        projector.n_epochs,
-        init,
-        check_random_state(projector.random_state),
-    )
-
-    # Assign any points that are fully disconnected from our manifold(s) to have embedding
-    # coordinates of np.nan.  These will be filtered by our plotting functions automatically.
-    # They also prevent users from being deceived a distance query to one of these points.
-    # Might be worth moving this into simplicial_set_embedding or _fit_embed_data
+    # Run embedding for each repulsion strength
     disconnected_vertices = np.array(projector.graph_.sum(axis=1)).flatten() == 0
-    if len(disconnected_vertices) > 0:
-        projector.embedding_[disconnected_vertices] = np.full(
-            projector.n_components, np.nan
+    for i, repulsion in enumerate(repulsion_strengths):
+        # Apply repulsion strength
+        if len(epoch_sequence) > i:
+            projector.n_epochs = epoch_sequence[i]
+        projector.repulsion_strength = repulsion
+        
+        # Extract initialisation
+        if not hasattr(projector, "embedding_"):
+            init = projector.init
+        else:
+            init = projector.embedding_
+            # Fill in reasonable far-away coordinates for disconnected vertices
+            # So they don't introduce repulsion in an occupied region of the
+            # embedding
+            init[np.any(np.isnan(init), axis=1), :] = np.array(
+                np.repeat([-8.0], init.shape[1])
+            )
+        
+        # Run embedding procedure
+        projector.embedding_, aux_data = projector._fit_embed_data(
+            projector._raw_data,
+            projector.n_epochs,
+            init,
+            check_random_state(projector.random_state),
         )
-
-    projector.embedding_ = projector.embedding_
-    if projector.output_dens:
-        projector.rad_orig_ = aux_data["rad_orig"]
-        projector.rad_emb_ = aux_data["rad_emb"]
+        
+        # Assign any points that are fully disconnected from our manifold(s) to
+        # have embedding coordinates of np.nan. These will be filtered by our
+        # plotting functions automatically.
+        if len(disconnected_vertices) > 0:
+            projector.embedding_[disconnected_vertices] = np.full(
+                projector.n_components, np.nan
+            )
+        
+        # Store Densmap radii if needed
+        if projector.output_dens:
+            projector.rad_orig_ = aux_data["rad_orig"]
+            projector.rad_emb_ = aux_data["rad_emb"]
 
     return projector
 
@@ -428,8 +452,8 @@ def tile_components(
     Parameters
     ----------
     projector : UMAP
-        A fitted UMAP object with embedding computed. 
-        
+        A fitted UMAP object with embedding computed.
+
         The embedding is updated inplace.
     component_labels : array_like
         An integer label (zero to N) indicating which connected component each point
