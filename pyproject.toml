@@ -1,3 +1,58 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "lensed_umap"
+version = "0.1.2"
+description = "Untangle UMAP with lenses."
+keywords = ["umap", "dimensionality reduction", "data visualization"]
+authors = [
+  {name= "Jelmer Bot", email = "jelmer.bot@uhasselt.be" }
+]
+readme = "README.md"
+license = { text = "BSD-3-Clause" } 
+classifiers = [
+	"Development Status :: 5 - Production/Stable",
+	"License :: OSI Approved :: BSD License",
+	"Natural Language :: English",
+	"Operating System :: OS Independent",
+	"Programming Language :: Python :: 3 :: Only"
+]
+requires-python = ">=3.10"
+dependencies = [
+  "numpy >= 2, <3",
+	"pandas >= 2.2",
+	"scipy >= 1.9",
+	"scikit-learn >= 1.1",
+	"umap-learn >= 0.5",
+	"numba >= 0.57"
+]
+
+[project.urls]
+Homepage = "https://github.com/vda-lab/lensed_umap"
+Issues = "https://github.com/vda-lab/lensed_umap/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["lensed_umap*"]
+namespaces = false
+
+[project.optional-dependencies]
+tests = ["pytest"]
+docs = [
+  "nbsphinx >= 0.9",
+  "sphinx_rtd_theme >= 2.0",
+  "numpydoc >= 0.9.0",
+  "matplotlib >= 3.8"
+]
+notebooks = [
+	"pandas >= 2.2",
+  "jupyterlab >= 4",
+  "matplotlib >= 3.4",
+	"seaborn >= 0.12",	
+	"hvplot >= 0.9",
+	"datashader >= 0.16",
+	"holoviews >= 1.18",
+	"anndata >= 0.10"
+]

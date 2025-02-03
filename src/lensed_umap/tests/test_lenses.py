@@ -8,7 +8,6 @@ import numba as nb
 from copy import copy
 from umap import UMAP
 from sklearn.datasets import make_blobs
-from sklearn.utils._testing import assert_raises
 from lensed_umap import (
     apply_lens,
     apply_mask,
@@ -75,16 +74,22 @@ def test_multi_stage_embed_graph():
 
 def test_apply_lens_inputs_invalid():
     # Invalid values
-    assert_raises(AttributeError, lambda: apply_lens(empty_projector, lens))
-    assert_raises(ValueError, lambda: apply_lens(projector, []))
-    assert_raises(
-        ValueError, lambda: apply_lens(projector, lens, discretization="wrong")
-    )
-    assert_raises(ValueError, lambda: apply_lens(projector, lens[None]))
-    assert_raises(ValueError, lambda: apply_lens(projector, lens, resolution=2))
-    assert_raises(ValueError, lambda: apply_lens(projector, lens, resolution=1))
-    assert_raises(ValueError, lambda: apply_lens(projector, lens, resolution=0))
-    assert_raises(ValueError, lambda: apply_lens(projector, lens, resolution=-1))
+    with pytest.raises(AttributeError):
+        apply_lens(empty_projector, lens)
+    with pytest.raises(ValueError):
+        apply_lens(projector, [])
+    with pytest.raises(ValueError):
+        apply_lens(projector, lens, discretization="wrong")
+    with pytest.raises(ValueError):
+        apply_lens(projector, lens[None])
+    with pytest.raises(ValueError):
+        apply_lens(projector, lens, resolution=2)
+    with pytest.raises(ValueError):
+        apply_lens(projector, lens, resolution=1)
+    with pytest.raises(ValueError):
+        apply_lens(projector, lens, resolution=0)
+    with pytest.raises(ValueError):
+        apply_lens(projector, lens, resolution=-1)
     with pytest.warns(UserWarning):
         apply_lens(projector, lens, i_dont_exist=2)
 
@@ -165,9 +170,12 @@ def test_apply_lens_inputs_valid_9():
 
 def test_apply_mask_inputs_invalid():
     # Invalid values
-    assert_raises(AttributeError, lambda: apply_mask(empty_projector, masker))
-    assert_raises(AttributeError, lambda: apply_mask(projector, empty_projector))
-    assert_raises(ValueError, lambda: apply_mask(projector, half_masker))
+    with pytest.raises(AttributeError):
+        apply_mask(empty_projector, masker)
+    with pytest.raises(AttributeError):
+        apply_mask(projector, empty_projector)
+    with pytest.raises(ValueError):
+        apply_mask(projector, half_masker)
     with pytest.warns(UserWarning):
         apply_mask(projector, masker, i_dont_exist=2)
 
@@ -197,40 +205,28 @@ def test_apply_mask_inputs_valid_3():
 
 def test_apply_local_mask_inputs_invalid():
     # Invalid values
-    assert_raises(AttributeError, lambda: apply_local_mask(empty_projector, local_lens))
-    assert_raises(ValueError, lambda: apply_local_mask(projector, []))
-    assert_raises(
-        ValueError,
-        lambda: apply_local_mask(projector, local_lens, metric="wrong"),
-    )
-    assert_raises(
-        ValueError,
-        lambda: apply_local_mask(projector, local_lens, metric_kwds=()),
-    )
-    assert_raises(
-        ValueError,
-        lambda: apply_local_mask(projector, local_lens, metric_kwds="something else"),
-    )
-    assert_raises(
-        ValueError,
-        lambda: apply_local_mask(projector, local_lens, metric_kwds=90),
-    )
-    assert_raises(
-        nb.core.errors.TypingError,
-        lambda: apply_local_mask(projector, local_lens, metric_kwds={"p": 1}),
-    )
-    assert_raises(
-        ValueError,
-        lambda: apply_local_mask(
+    with pytest.raises(AttributeError):
+        apply_local_mask(empty_projector, local_lens)
+    with pytest.raises(ValueError):
+        apply_local_mask(projector, [])
+    with pytest.raises(ValueError):
+        apply_local_mask(projector, local_lens, metric="wrong")
+    with pytest.raises(ValueError):
+        apply_local_mask(projector, local_lens, metric_kwds=()),
+    with pytest.raises(ValueError):
+        apply_local_mask(projector, local_lens, metric_kwds="something else"),
+    with pytest.raises(ValueError):
+        apply_local_mask(projector, local_lens, metric_kwds=90),
+    with pytest.raises(TypeError):
+        apply_local_mask(projector, local_lens, metric_kwds={"p": 1}),
+    with pytest.raises(ValueError):
+        apply_local_mask(
             projector, local_lens, n_neighbors=projector.n_neighbors
         ),
-    )
-    assert_raises(
-        ValueError,
-        lambda: apply_local_mask(
+    with pytest.raises(ValueError):
+        apply_local_mask(
             projector, local_lens, n_neighbors=projector.n_neighbors + 1
-        ),
-    )
+        )
     with pytest.warns(UserWarning):
         apply_local_mask(projector, local_lens, i_dont_exist=2)
 
