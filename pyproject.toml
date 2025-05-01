@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lensed_umap"
 version = "0.1.2"
-description = "Untangle UMAP with lenses."
+description = "Untangle UMAP with filters."
 keywords = ["umap", "dimensionality reduction", "data visualization"]
 authors = [
   {name= "Jelmer Bot", email = "jelmer.bot@uhasselt.be" }

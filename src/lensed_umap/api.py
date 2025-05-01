@@ -14,7 +14,7 @@ from umap import UMAP
 from umap.umap_ import reset_local_connectivity as umap_reset_connectivity
 import umap.distances as dist
 
-from typing import Optional, Callable, Union    
+from typing import Optional, Callable, Union
 from numpy.typing import ArrayLike
 
 from .fast_impl import (
@@ -335,7 +335,12 @@ def apply_local_mask(
 
     # Extract smallest `n_neighbor` edges
     knn_indices = _extract_local_lens_edges(
-        clone.graph_.indices, clone.graph_.indptr, values, metric_fn, n_neighbors
+        clone.graph_.indices,
+        clone.graph_.indptr,
+        clone.graph_.data,
+        values,
+        metric_fn,
+        n_neighbors,
     )
 
     # Filter graph to keep only the extracted edges
@@ -401,7 +406,7 @@ def embed_graph(
         if len(epoch_sequence) > i:
             projector.n_epochs = epoch_sequence[i]
         projector.repulsion_strength = repulsion
-        
+
         # Extract initialisation
         if not hasattr(projector, "embedding_"):
             init = projector.init
@@ -410,10 +415,8 @@ def embed_graph(
             # Fill in reasonable far-away coordinates for disconnected vertices
             # So they don't introduce repulsion in an occupied region of the
             # embedding
-            init[np.any(np.isnan(init), axis=1), :] = np.array(
-                np.repeat([-8.0], init.shape[1])
-            )
-        
+            init[disconnected_vertices, :] = np.array(np.repeat([-20.0], init.shape[1]))
+
         # Run embedding procedure
         projector.embedding_, aux_data = projector._fit_embed_data(
             projector._raw_data,
@@ -421,7 +424,7 @@ def embed_graph(
             init,
             check_random_state(projector.random_state),
         )
-        
+
         # Assign any points that are fully disconnected from our manifold(s) to
         # have embedding coordinates of np.nan. These will be filtered by our
         # plotting functions automatically.
@@ -429,11 +432,116 @@ def embed_graph(
             projector.embedding_[disconnected_vertices] = np.full(
                 projector.n_components, np.nan
             )
-        
+
         # Store Densmap radii if needed
         if projector.output_dens:
             projector.rad_orig_ = aux_data["rad_orig"]
             projector.rad_emb_ = aux_data["rad_emb"]
+
+    return projector
+
+
+def cuml_embed_graph(
+    projector: UMAP,
+    repulsion_strengths: Optional[list[float]] = None,
+    epoch_sequence: Optional[list[int]] = None,
+):
+    """
+    GPU accellerated UMAP embedding computation using CuML. Initialises
+    the new projection with the current embedding if one is present.
+
+    Parameters
+    ----------
+    projector : UMAP
+        A fitted UMAP object (at least with transform_mode='graph'). The
+        `embedding_` field will be created or updated if present. The
+        underlying CuML code does not support densmap embeddings.
+    repulsion_strengths : list of float, optional
+        Runs embedding procedure with given repulsion strengths in sequence,
+        allowing fine-grained repulsion ramps that can improve convergence.
+        Defaults to the projector's `repulsion_strength` attribute.
+    epoch_sequence : list of int, optional
+        The number of epochs to run each repulsion strength. If not given, uses
+        the projector's `n_epochs` attribute.
+
+    Returns
+    -------
+    projector : UMAP
+        Projector with filled `embedding_` field.
+
+        This return value is provided to chain functions but can be ignored as
+        the given UMAP object is updated inplace.
+    """
+    # Don't accept densmap layouts to avoid layout type conversions.
+    if projector.output_dens:
+        raise ValueError("CuML cannot compute densmap embeddings.")
+
+    # Check if CuML is available
+    try:
+        from cuml.manifold.simpl_set import simplicial_set_embedding as cuml_embed
+    except ModuleNotFoundError:
+        raise RuntimeError(
+            "Cannot find CuML. See htpps://rapids.ai for installation instructions"
+        )
+
+    # Fill default parameters
+    if repulsion_strengths is None:
+        repulsion_strengths = [projector.repulsion_strength]
+    if epoch_sequence is None:
+        epoch_sequence = [projector.n_epochs]
+    elif len(epoch_sequence) > len(repulsion_strengths):
+        warn("More epochs than repulsion strengths given. Ignoring extra epochs.")
+
+    # Convert inputs once
+    data = projector._raw_data.astype(np.float32)
+    graph = projector.graph_.tocoo()
+
+    # Create initialization parameter
+    disconnected_vertices = np.array(projector.graph_.sum(axis=1)).flatten() == 0
+    if not hasattr(projector, "embedding_"):
+        init = projector.init
+    else:
+        init = projector.embedding_.astype(np.float32)
+        init[disconnected_vertices, :] = np.array(
+            np.repeat(np.float32(-20.0), init.shape[1])
+        )
+
+    for i, repulsion in enumerate(repulsion_strengths):
+        # Apply repulsion strength
+        if len(epoch_sequence) > i:
+            projector.n_epochs = epoch_sequence[i]
+        projector.repulsion_strength = repulsion
+
+        # GPU accellerated layout
+        init = cuml_embed(
+            data,
+            graph,
+            init=init,
+            n_components=projector.n_components,
+            initial_alpha=projector._initial_alpha,
+            a=projector._a,
+            b=projector._b,
+            gamma=projector.repulsion_strength,
+            negative_sample_rate=projector.negative_sample_rate,
+            n_epochs=projector.n_epochs,
+            random_state=check_random_state(projector.random_state),
+            metric=projector.metric,
+            metric_kwds=projector.metric_kwds,
+            output_metric=projector.output_metric,
+            output_metric_kwds=projector.output_metric_kwds,
+            convert_dtype=True,
+            verbose=projector.verbose,
+        )
+
+    # Assign any points that are fully disconnected from our manifold(s) to
+    # have embedding coordinates of np.nan. These will be filtered by our
+    # plotting functions automatically.
+    projector.embedding_ = init.to_host_array()
+    del init
+    if len(disconnected_vertices) > 0:
+        projector.embedding_[disconnected_vertices] = np.full(
+            projector.n_components, np.nan
+        )
 
     return projector
 
@@ -544,7 +652,8 @@ def _update_embedding(clone: UMAP, skip_embedding: bool):
         embed_graph(clone)
     else:
         # Delete attributes related to the embedding
-        del clone.embedding_
+        if hasattr(clone, "embedding_"):
+            del clone.embedding_
         if clone.output_dens:
             del clone.rad_orig_
             del clone.rad_emb_

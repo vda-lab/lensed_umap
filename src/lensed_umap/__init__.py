@@ -5,6 +5,7 @@ from .api import (
     apply_mask,
     apply_local_mask,
     embed_graph,
+    cuml_embed_graph,
     tile_components,
     extract_embedding,
 )

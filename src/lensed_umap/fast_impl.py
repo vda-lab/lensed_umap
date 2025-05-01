@@ -78,7 +78,7 @@ def _apply_lens_filter(data, indices, indptr, binned_lens, circular):
         "col": nb.int32,
     },
 )
-def _extract_local_lens_edges(indices, indptr, values, metric_fn, n_neighbors):
+def _extract_local_lens_edges(indices, indptr, data, values, metric_fn, n_neighbors):
     """
     Extract's each point's lens-distance-smallest `n_neighbor` edges from the UMAP graph.
     Provides indices into CSR graph's rows! Not into the data itself!
@@ -86,11 +86,14 @@ def _extract_local_lens_edges(indices, indptr, values, metric_fn, n_neighbors):
     Function cannot be typed, creating a compile on import, as it takes a function argument.
     This results in a JIT-compile on every (first) call.
     """
-    # Allocate lens distances to fill
-    lens_distances = np.empty(indices.shape, dtype=np.float32)
-
-    # Allocate neighbour structure
+    # Allocate heaps
     remaining_neighbors = np.full((len(indptr) - 1, n_neighbors), -1, dtype=np.int32)
+    remaining_lens_dists = np.full(
+        (len(indptr) - 1, n_neighbors), np.inf, dtype=np.float32
+    )
+    remaining_edge_dists = np.full(
+        (len(indptr) - 1, n_neighbors), np.inf, dtype=np.float32
+    )
 
     # Process rows
     for row in nb.prange(len(indptr) - 1):
@@ -98,25 +101,94 @@ def _extract_local_lens_edges(indices, indptr, values, metric_fn, n_neighbors):
         end_idx = indptr[row + 1]
 
         # Extract row vectors
-        row_data = lens_distances[start_idx:end_idx]
         row_indices = indices[start_idx:end_idx]
+        row_strengths = data[start_idx:end_idx]
 
         # Compute lens distances
         for idx, col in enumerate(row_indices):
-            row_data[idx] = metric_fn(values[row, :], values[col, :])
-
-        # Sort distances up to n_neighbors
-        if len(row_data) <= n_neighbors:
-            row_keep_indices = np.argsort(row_data)
-        else:
-            row_keep_indices = np.argpartition(row_data, np.arange(n_neighbors))[
-                :n_neighbors
-            ]
-
-        # Extract n_neighbor indices
-        remaining_neighbors[row, : len(row_keep_indices)] = row_keep_indices
+            heap_push(
+                remaining_neighbors[row, :],
+                remaining_lens_dists[row, :],
+                remaining_edge_dists[row, :],
+                idx,
+                metric_fn(values[row, :], values[col, :]),
+                1 - row_strengths[idx],
+            )
 
     return remaining_neighbors
+
+
+@nb.njit(
+    (nb.int32[::1], nb.float32[::1], nb.float32[::1], nb.int32, nb.float32, nb.float32),
+    fastmath=True,
+    cache=True,
+    locals={
+        "size": nb.types.intp,
+        "i": nb.types.uint16,
+        "ic1": nb.types.uint16,
+        "ic2": nb.types.uint16,
+        "i_swap": nb.types.uint16,
+    },
+)
+def heap_push(indices, lens_dists, edge_dists, new_idx, new_lens_d, new_edge_d):
+    """Maintain heap sorted by lens distance with ties broken on edge distance."""
+    # Skip if the new distances are too large.
+    if new_lens_d > lens_dists[0] or (
+        new_lens_d == lens_dists[0] and new_edge_d > edge_dists[0]
+    ):
+        return
+
+    # Set new value as largest element
+    indices[0] = new_idx
+    lens_dists[0] = new_lens_d
+    edge_dists[0] = new_edge_d
+
+    # Descend the heap
+    i = 0
+    size = lens_dists.shape[0]
+    while True:
+        ic1 = 2 * i + 1
+        ic2 = ic1 + 1
+
+        if ic1 >= size:
+            break
+        elif ic2 >= size:
+            # ic1 greater than new
+            if lens_dists[ic1] > new_lens_d or (
+                lens_dists[ic1] == new_lens_d and edge_dists[ic1] > new_edge_d
+            ):
+                i_swap = ic1
+            else:
+                break
+        # ic1 greater equal than ic2
+        elif lens_dists[ic1] > lens_dists[ic2] or (
+            lens_dists[ic1] == lens_dists[ic2] and edge_dists[ic1] >= edge_dists[ic2]
+        ):
+            # new smaller than ic1
+            if new_lens_d < lens_dists[ic1] or (
+                lens_dists[ic1] == new_lens_d and new_edge_d < edge_dists[ic1]
+            ):
+                i_swap = ic1
+            else:
+                break
+        else:
+            # new smaller than ic2
+            if new_lens_d < lens_dists[ic2] or (
+                lens_dists[ic2] == new_lens_d and new_edge_d < edge_dists[ic2]
+            ):
+                i_swap = ic2
+            else:
+                break
+
+        indices[i] = indices[i_swap]
+        lens_dists[i] = lens_dists[i_swap]
+        edge_dists[i] = edge_dists[i_swap]
+
+        i = i_swap
+
+    indices[i] = new_idx
+    lens_dists[i] = new_lens_d
+    edge_dists[i] = new_edge_d
 
 
 @nb.njit(
