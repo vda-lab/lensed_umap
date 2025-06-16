@@ -589,17 +589,22 @@ def tile_components(
         X = projector.embedding_[mask]
         X = PCA(n_components=2).fit_transform(X)
 
+        # Transpose and flip?
+        if secondary_axis is not None:
+            corr0 = np.correlate(secondary_axis[mask], X[:, 0])
+            corr1 = np.correlate(secondary_axis[mask], X[:, 1])
+            max_index = np.argmax([abs(corr0), abs(corr1)])
+            if max_index > 0:
+                X = X[:, ::-1]  # Transpose the axes
+            corrs = [corr0, corr1]
+            if corrs[max_index] < 0:
+                X[:, 0] *= -1
+
         # Bounding box-shift
         ix, iy = np.min(X, axis=0)
         ax, ay = np.max(X, axis=0)
         X -= np.array([[(ax + ix) / 2, iy - y_offset]])
         y_offset += pad_factor * (ay - iy)
-
-        # Flip secondary axis?
-        if secondary_axis is not None:
-            corr = np.correlate(secondary_axis[mask], X[:, 0])
-            if corr < 0:
-                X[:, 0] *= -1
 
         # Store the updated coordinates
         projector.embedding_[mask, :] = X
