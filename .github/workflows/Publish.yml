@@ -49,7 +49,7 @@ jobs:
           gh release create -R vda-lab/lensed_umap -t "Version ${{ steps.version.outputs.version }}" -n "**Full Changelog**: https://github.com/vda-lab/lensed_umap/commits/${{ steps.version.outputs.tag }}" "${{ steps.version.outputs.tag }}" dist/*.tar.gz
         
       - name: Publish package to (Test)PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.5
+        uses: pypa/gh-action-pypi-publish@v1.12.4
         # Comment lines below to publish to PyPi instead of test PyPi
         # with:
         #   repository-url: https://test.pypi.org/legacy/
