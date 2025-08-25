@@ -43,7 +43,7 @@ jobs:
           if [[ ! -f dist/lensed_umap-${{ steps.version.outputs.version }}.tar.gz ]] ; then exit 1; fi
       
       - name: Publish package to (Test)PyPI
-        uses: pypa/gh-action-pypi-publish@v1.12.4
+        uses: pypa/gh-action-pypi-publish@release/v1
         # Comment lines below to publish to PyPi instead of test PyPi
         # with:
         #   repository-url: https://test.pypi.org/legacy/
