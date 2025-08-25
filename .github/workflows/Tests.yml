@@ -31,7 +31,7 @@ on:
 jobs:
   build_dists:
     name: Build dists
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     outputs:
       WHEEL_NAME: ${{ steps.dists.outputs.WHEEL_NAME }}
     steps:
@@ -67,63 +67,31 @@ jobs:
       - name: Upload sdist result
         uses: actions/upload-artifact@v4
         with:
-          name: dists
+          name: dist
           path: dist/*
           if-no-files-found: error
 
   test_sdist:
-    name: Test dist for cp${{ matrix.python }}-${{ matrix.platform_id }}-${{ matrix.manylinux_image }}
+    name: Test Python ${{ matrix.python }}
     needs: build_dists
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
-        include:
-          - os: windows-latest
-            python: "3.10"
-            platform_id: win_amd64
-          - os: windows-latest
-            python: "3.11"
-            platform_id: win_amd64
-          - os: windows-latest
-            python: "3.12"
-            platform_id: win_amd64
-
-          # Linux 64 bit manylinux2014
-          - os: ubuntu-latest
-            python: "3.10"
-            platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-          - os: ubuntu-latest
-            python: "3.11"
-            platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-          - os: ubuntu-latest
-            python: "3.12"
-            platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-
-          # MacOS x86_64
-          - os: macos-latest
-            python: "3.10"
-            platform_id: macosx_x86_64
-          - os: macos-latest
-            python: "3.11"
-            platform_id: macosx_x86_64
-          - os: macos-latest
-            python: "3.12"
-            platform_id: macosx_x86_64
+        python: ["3.10", "3.11", "3.12", "3.13"]
+        
     steps:
       - name: Download sdist
         uses: actions/download-artifact@v4
         with:
-          name: dists
+          name: dist
           path: dist/
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
